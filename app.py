@@ -7,60 +7,36 @@ import threading
 import sys
 import time
 import re
-
+import os
 
 # Initialize a Bolt for Python app
 app = App()
-epicserial = None
 
-textBuffer = ""
-
-
-def register(app: App):
-  
-    app.action("deny_delivery")(deny_delivery_callback) # Add this line
-
-
+serialTerminal = None
 
 @app.action("ctrlc")
 def ctrlc(ack, body, respond):
-    epicserial.write("^[C".encode())
+    serialTerminal.write("^[C".encode())
     ack()
 
 @app.action("ctrld")
 def crtld(ack, body, respond):
-    epicserial.write("^[D".encode())
+    serialTerminal.write("^[D".encode())
     ack()
-
-
-
 
 @app.event("message")
 def message(event, client):
-    """Display the onboarding welcome message after receiving a message
-    that contains "start".
-    """
-    print("message received")
-
-    channel_id = event.get("channel")
-    user_id = event.get("user")
     text = event.get("text")
 
-    if text and channel_id == "C0BCQCWM47N" and text[0] != "#":
-
-        #     result = subprocess.run(text.split(), stdout=subprocess.PIPE)
+    if text and event.get("channel") == "C0BCQCWM47N" and text[0] != "#":
         try:
-            epicserial.write((text + "\r\n").encode())
+            serialTerminal.write((text + "\r\n").encode())
 
         except:
-            print("whomp")
-
-    # Post the onboarding message in Slack
+            print("womp womp")
 
 
-#  response = client.chat_postMessage(**message)
-
-
+# "borrowed" from stackoverflow 
 ansi_escape = re.compile(
     r"""
     \x1B  # ESC
@@ -78,20 +54,17 @@ ansi_escape = re.compile(
 
 
 def reader_thread(ser, client):
-    """Print incoming data in real time."""
     while ser.is_open:
         try:
             data = ser.read(ser.in_waiting or 1)
             if data:
                 print("womp2")
-                sys.stdout.write(data.decode("utf-8", errors="replace"))
 
                 message_text = ansi_escape.sub(
                     "", data.decode("ascii", errors="replace")
                 )
                 message = {
                     "channel": "C0BCQCWM47N",
-                    "username": "supersecurebot",
                     "icon_emoji": ":waga:",
                     "blocks": [
                         {
@@ -144,9 +117,7 @@ def terminal(port, client):
     baudrate = 9600
     ser = serial.Serial(port, baudrate, timeout=0.1)
     print("serial conected")
-
     return ser
-    # ser.write(("whoami" + "\r\n").encode())
 
 
 if __name__ == "__main__":
@@ -154,17 +125,16 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler())
-    # app.start(3000)
 
     app_thread = threading.Thread(target=app.start, args=(3000,))
     app_thread.start()
 
-    epicserial = terminal("/dev/pts/4", app.client)
+    serialTerminal = terminal(os.getenv("SERIAL"), app.client)
 
     reader = threading.Thread(
         target=reader_thread,
         args=(
-            epicserial,
+            serialTerminal,
             app.client,
         ),
     )
