@@ -8,11 +8,15 @@ import sys
 import time
 import re
 import os
+from dotenv import load_dotenv, dotenv_values 
 
-# Initialize a Bolt for Python app
+
 app = App()
 
+load_dotenv() 
+
 serialTerminal = None
+botChannel = os.getenv("CHANNEL")
 
 @app.action("ctrlc")
 def ctrlc(ack, body, respond):
@@ -27,8 +31,9 @@ def crtld(ack, body, respond):
 @app.event("message")
 def message(event, client):
     text = event.get("text")
+    event.get("user")
 
-    if text and event.get("channel") == "C0BCQCWM47N" and text[0] != "#":
+    if text and event.get("channel") == botChannel and text[0] != "#":
         try:
             serialTerminal.write((text + "\r\n").encode())
 
@@ -64,7 +69,7 @@ def reader_thread(ser, client):
                     "", data.decode("ascii", errors="replace")
                 )
                 message = {
-                    "channel": "C0BCQCWM47N",
+                    "channel": botChannel,
                     "icon_emoji": ":waga:",
                     "blocks": [
                         {
