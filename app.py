@@ -1,5 +1,5 @@
 import logging
-from slack_bolt import *
+from slack_bolt import App
 from slack_sdk.web import WebClient
 import subprocess
 import serial
@@ -9,9 +9,9 @@ import time
 import re
 import os
 from dotenv import load_dotenv, dotenv_values 
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-
-app = App()
+app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 load_dotenv() 
 
@@ -32,7 +32,6 @@ def crtld(ack, body, respond):
 def message(event, client):
     text = event.get("text")
     event.get("user")
-
     if text and event.get("channel") == botChannel and text[0] != "#":
         try:
             serialTerminal.write((text + "\r\n").encode())
@@ -131,7 +130,9 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler())
 
-    app_thread = threading.Thread(target=app.start, args=(3000,))
+    smh = SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
+
+    app_thread = threading.Thread(target=smh.start, args=())
     app_thread.start()
 
     serialTerminal = terminal(os.getenv("SERIAL"), app.client)
