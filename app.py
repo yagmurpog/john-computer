@@ -10,6 +10,7 @@ import re
 import os
 from dotenv import load_dotenv, dotenv_values 
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from vm_stuff import VirtualMachine
 
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
@@ -124,7 +125,27 @@ def terminal(port, client):
     return ser
 
 
+
+def wait_until(delegate, timeout: int):
+    end = time.time() + timeout
+    while time.time() < end:
+        if delegate():
+            return True
+        else:
+            time.sleep(0.1)
+    return False
+
 if __name__ == "__main__":
+    myEpicVM = VirtualMachine()
+    vmThread = threading.Thread(
+    target=myEpicVM.runVM
+    )
+    vmThread.daemon = True
+    vmThread.start()
+    
+
+    wait_until(lambda: (myEpicVM.serial != ""), 5)
+    serialLocation = myEpicVM.serial
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -135,7 +156,7 @@ if __name__ == "__main__":
     app_thread = threading.Thread(target=smh.start, args=())
     app_thread.start()
 
-    serialTerminal = terminal(os.getenv("SERIAL"), app.client)
+    serialTerminal = terminal(serialLocation, app.client)
 
     reader = threading.Thread(
         target=reader_thread,
